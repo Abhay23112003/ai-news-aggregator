@@ -1,6 +1,3 @@
-import time
-import schedule
-
 from app.scrapers.rss_scraper import fetch_rss
 from app.scrapers.article_fetcher import fetch_article_html
 from app.services.article_parser import extract_article_text
@@ -12,7 +9,7 @@ from app.services.email_formatter import build_email_html
 from app.services.email_service import send_email
 
 
-def run_pipeline():
+def main():
     init_db()
     feed_url = "https://feeds.bbci.co.uk/news/rss.xml"
 
@@ -33,7 +30,7 @@ def run_pipeline():
         article["summary"] = summary
         save_article(article)
 
-    # 👉 Send email after each run
+    # Send email after pipeline run
     recent_articles = get_recent_articles(limit=10)
     html_content = build_email_html(recent_articles)
 
@@ -42,21 +39,7 @@ def run_pipeline():
         html_content=html_content
     )
 
-    print("Pipeline completed and email sent.")
-
-
-def main():
-    # Run once at startup
-    run_pipeline()
-
-    # Run every 6 hours
-    schedule.every(6).hours.do(run_pipeline)
-
-    print("Scheduler started. Email will be sent every 6 hours.")
-
-    while True:
-        schedule.run_pending()
-        time.sleep(60)
+    print("Pipeline run completed successfully.")
 
 
 if __name__ == "__main__":
