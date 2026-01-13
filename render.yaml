@@ -1,6 +1,0 @@
-services:
-  - type: worker
-    name: ai-news-aggregator
-    env: python
-    plan: free
-    startCommand: python -m app.main
