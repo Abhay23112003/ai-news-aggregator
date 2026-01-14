@@ -7,6 +7,8 @@ from app.services.ai_summarizer import summarize_article
 from app.services.database import init_db, save_article, get_recent_articles
 from app.services.email_formatter import build_email_html
 from app.services.email_service import send_email
+from app.services.article_parser import extract_image_url
+
 
 
 def main():
@@ -23,6 +25,8 @@ def main():
         try:
             html = fetch_article_html(article["link"])
             article["full_text"] = extract_article_text(html)
+            article["image_url"] = extract_image_url(html)
+
         except Exception:
             continue
 

@@ -16,6 +16,7 @@ def init_db():
             summary TEXT,
             source TEXT,
             link TEXT UNIQUE,
+            image_url TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
@@ -28,12 +29,13 @@ def save_article(article:dict):
     cursor=conn.cursor()
 
     cursor.execute("""
-        INSERT OR IGNORE INTO articles (title, summary, source, link)
-        VALUES (?, ?, ?, ?)
+        INSERT OR IGNORE INTO articles (title, summary, source, image_url, link)
+        VALUES (?, ?, ?, ?, ?)
     """,(
         article["title"],
         article["summary"],
         article["source"],
+        article.get("image_url"),
         article["link"]
     ))
 
@@ -45,7 +47,7 @@ def get_recent_articles(limit:int=10):
     cursor=conn.cursor()
 
     rows=cursor.execute("""
-        SELECT title,summary,source,link,created_at
+        SELECT title,summary,source,link,image_url,created_at
         FROM articles
         ORDER BY created_at DESC
         LIMIT ?
@@ -60,6 +62,7 @@ def get_recent_articles(limit:int=10):
             "summary": row[1],
             "source": row[2],
             "link": row[3],
-            "created_at": row[4],
+            "image_url": row[4],
+            "created_at": row[5],
         })
     return articles
