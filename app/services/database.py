@@ -4,25 +4,26 @@ from pathlib import Path
 DB_PATH=Path("data/news.db")
 
 def init_db():
-    DB_PATH.parent.mkdir(exist_ok=True)
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
 
-    conn=sqlite3.connect(DB_PATH)
-    cursor=conn.cursor()
+    cursor.execute("DROP TABLE IF EXISTS articles")
 
     cursor.execute("""
-        CREATE TABLE IF NOT EXISTS articles (
+        CREATE TABLE articles (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             title TEXT,
             summary TEXT,
             source TEXT,
             link TEXT UNIQUE,
             image_url TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            created_at TEXT
         )
     """)
 
     conn.commit()
     conn.close()
+
 
 def save_article(article:dict):
     conn=sqlite3.connect(DB_PATH)
