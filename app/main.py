@@ -4,7 +4,7 @@ from app.services.article_parser import extract_article_text
 from app.services.normalizer import normalize_articles
 from app.services.relevance import is_relevant
 from app.services.ai_summarizer import summarize_article
-from app.services.database import init_db, save_article, get_recent_articles
+from app.services.database import save_article, get_recent_articles
 from app.services.email_formatter import build_email_html
 from app.services.email_service import send_email
 from app.services.article_parser import extract_image_url
@@ -12,7 +12,6 @@ from app.services.article_parser import extract_image_url
 
 
 def main():
-    init_db()
     feed_url = "https://feeds.bbci.co.uk/news/rss.xml"
 
     raw_articles = fetch_rss(feed_url, limit=5)
