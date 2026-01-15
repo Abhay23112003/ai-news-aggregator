@@ -1,69 +1,60 @@
-import sqlite3
-from pathlib import Path
+import os
+import psycopg
+from psycopg.rows import dict_row
 
-DB_PATH=Path("data/news.db")
+DATABASE_URL = os.getenv("DATABASE_URL")
 
-def init_db():
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-
-    cursor.execute("DROP TABLE IF EXISTS articles")
-
-    cursor.execute("""
-        CREATE TABLE articles (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            title TEXT,
-            summary TEXT,
-            source TEXT,
-            link TEXT UNIQUE,
-            image_url TEXT,
-            created_at TEXT
-        )
-    """)
-
-    conn.commit()
-    conn.close()
+def get_connection():
+    if not DATABASE_URL:
+        raise RuntimeError("DATABASE_URL is not set")
+    return psycopg.connect(DATABASE_URL, row_factory=dict_row)
 
 
-def save_article(article:dict):
-    conn=sqlite3.connect(DB_PATH)
-    cursor=conn.cursor()
+# ---------- WRITE (used by GitHub Actions) ----------
+def save_article(article):
+    query = """
+        INSERT INTO articles (title, summary, source, link, image_url)
+        VALUES (%s, %s, %s, %s, %s)
+        ON CONFLICT (link) DO NOTHING
+    """
 
-    cursor.execute("""
-        INSERT OR IGNORE INTO articles (title, summary, source, image_url, link)
-        VALUES (?, ?, ?, ?, ?)
-    """,(
-        article["title"],
-        article["summary"],
-        article["source"],
-        article.get("image_url"),
-        article["link"]
-    ))
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                query,
+                (
+                    article["title"],
+                    article["summary"],
+                    article["source"],
+                    article["link"],
+                    article.get("image_url"),
+                ),
+            )
 
-    conn.commit()
-    conn.close()
 
-def get_recent_articles(limit:int=10):
-    conn=sqlite3.connect(DB_PATH)
-    cursor=conn.cursor()
-
-    rows=cursor.execute("""
-        SELECT title,summary,source,link,image_url,created_at
+# ---------- READ (used by FastAPI) ----------
+def get_recent_articles(limit: int = 10):
+    query = """
+        SELECT title, summary, source, link, image_url, created_at
         FROM articles
         ORDER BY created_at DESC
-        LIMIT ?
-    """,(limit,)).fetchall()
+        LIMIT %s
+    """
 
-    conn.close()
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(query, (limit,))
+            rows = cur.fetchall()
 
-    articles=[]
-    for row in rows:
-        articles.append({
-            "title": row[0],
-            "summary": row[1],
-            "source": row[2],
-            "link": row[3],
-            "image_url": row[4],
-            "created_at": row[5],
-        })
-    return articles
+    # rows are already dicts because of dict_row
+    return [
+        {
+            "title": row["title"],
+            "summary": row["summary"],
+            "source": row["source"],
+            "link": row["link"],
+            "image_url": row["image_url"],
+            "created_at": row["created_at"],
+        }
+        for row in rows
+    ]
