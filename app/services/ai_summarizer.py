@@ -10,35 +10,58 @@ def summarize_article(article: dict) -> str:
     Summarize a news article using full article text.
     """
     prompt = f"""
-    Act as a professional news desk editor and data analyst. Analyze the provided article title and text to generate a structured JSON response.
+    Act as a professional news desk editor. 
+    Analyze the provided article and generate a structured JSON response.
 
     Task Requirements:
-    1. Summary: Write a 2-3 sentence factual summary in a professional news reporter tone. Do not use introductory phrases.
-    2. Trending Status: Determine if the news is "Trending" (True/False) based on the timeliness and scale of the impact.
-    3. Category Selection: Assign exactly one category from this specific list: Technology, Finance, Sports, Health, World, Science.
+    1. Summary: Write a 2-3 sentence factual summary. Do not use introductory phrases.
+    2. Trending Status: Determine if the news is "Trending" (True/False) based on impact.
+    3. Category Selection: Assign exactly ONE category from: Technology, Finance, Sports, Health, World, Science.
 
-    Output Format: 
-    Return ONLY a valid JSON object with the following keys: 
+    Article Data: 
+    Title: {article['title']} 
+    Full Text: {article['full_text']}
+
+    Output Format (STRICT):
+    Return ONLY a valid JSON object with these keys:
     {{ 
         "summary": "string", 
         "trending": boolean, 
         "category": "string" 
     }}
 
-    Article Data: 
-    Title: {article['title']} 
-    Full Text: {article['full_text']}
-
-    Constraint: If the article does not perfectly fit a category, pick the closest match from the provided list. Do not create new categories.
-    """
+    CRITICAL CONSTRAINTS:
+    - Do NOT include markdown code blocks (like ```json),only give a valid json object.
+    - Do NOT include any introductory text, concluding explanations, or notes.
+    - Your entire response MUST be the JSON object itself so it can be parsed by json.loads().
+    - If a category doesn't fit perfectly, pick the closest match from the list.
+"""
 
     response = client.chat.completions.create(
         model="llama-3.1-8b-instant",
         messages=[
             {"role": "user", "content": prompt}
         ],
-        temperature=0.3,
+        temperature=0.1,
     )
 
-    content=response.choices[0].message.content
-    return json.loads(content)
+    content=response.choices[0].message.content.strip()
+    print("content: ",content)
+    try:
+        start_idx=content.find('{')
+        end_idx=content.rfind('}')+1
+        if start_idx==-1 or end_idx==0:
+            print("No JSON object found in the response")
+        clean_content=content[start_idx:end_idx]
+        return json.loads(clean_content)
+    
+    except (json.JSONDecodeError, ValueError) as e:
+        print(f"Error parsing JSON for article: {article['title']}")
+        print(f"Raw content was: {content}")
+        
+        # STEP 3: Fallback data so the loop continues and saves other articles
+        return {
+            "summary": article.get("title", "Summary unavailable"),
+            "trending": False,
+            "category": "World"
+        }

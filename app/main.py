@@ -30,6 +30,8 @@ def main():
             continue
 
         json_data = summarize_article(article)
+        if json_data["summary"]=='Summary unavailable':
+            continue
         article["summary"] = json_data["summary"]
         article["trending"]=json_data["trending"]
         article["category"]=json_data["category"]
