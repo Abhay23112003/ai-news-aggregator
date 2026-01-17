@@ -29,8 +29,10 @@ def main():
         except Exception:
             continue
 
-        summary = summarize_article(article)
-        article["summary"] = summary
+        json_data = summarize_article(article)
+        article["summary"] = json_data["summary"]
+        article["trending"]=json_data["trending"]
+        article["category"]=json_data["category"]
         save_article(article)
 
     # Send email after pipeline run

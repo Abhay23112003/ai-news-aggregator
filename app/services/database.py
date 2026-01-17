@@ -13,8 +13,8 @@ def get_connection():
 # ---------- WRITE (used by GitHub Actions) ----------
 def save_article(article):
     query = """
-        INSERT INTO articles (title, summary, source, link, image_url)
-        VALUES (%s, %s, %s, %s, %s)
+        INSERT INTO articles (title, summary, source, link, image_url, trending, category)
+        VALUES (%s, %s, %s, %s, %s, %s, %s)
         ON CONFLICT (link) DO NOTHING
     """
 
@@ -28,6 +28,8 @@ def save_article(article):
                     article["source"],
                     article["link"],
                     article.get("image_url"),
+                    article.get("trending"),
+                    article.get("category")
                 ),
             )
 
@@ -35,7 +37,7 @@ def save_article(article):
 # ---------- READ (used by FastAPI) ----------
 def get_recent_articles(limit: int = 10):
     query = """
-        SELECT title, summary, source, link, image_url, created_at
+        SELECT title, summary, source, link, image_url, trending, category, created_at
         FROM articles
         ORDER BY created_at DESC
         LIMIT %s
@@ -54,6 +56,8 @@ def get_recent_articles(limit: int = 10):
             "source": row["source"],
             "link": row["link"],
             "image_url": row["image_url"],
+            "trending": row["trending"],
+            "category": row["category"],
             "created_at": row["created_at"],
         }
         for row in rows
