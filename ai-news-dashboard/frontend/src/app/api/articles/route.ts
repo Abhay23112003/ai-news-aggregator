@@ -25,3 +25,38 @@ export async function GET(request: Request) {
     );
   }
 }
+
+export async function PATCH(request:Request) {
+  try {
+    const body=await request.json()
+    const {article_id,is_bookmarked}=body;
+
+    const response=await fetch(`${BACKEND_URL}/bookmark`,{
+      method:'PATCH',
+      headers:{
+        'Content-Type':'application/json',
+      },
+      body:JSON.stringify({
+        article_id:article_id,
+        is_bookmarked:is_bookmarked,
+      }),
+    });
+
+    if(!response.ok){
+      const errorData=await response.json()
+      return NextResponse.json(
+        {error:errorData || 'Failed to update bookmark'},
+        {status:response.status}
+      );
+    }
+    const data=await response.json();
+    return NextResponse.json(data)
+  } catch (error) {
+    console.error('Error in updating bookmark')
+    return NextResponse.json(
+      {error:'Internal server error'},
+      {status:500}
+    )
+  }
+}
+

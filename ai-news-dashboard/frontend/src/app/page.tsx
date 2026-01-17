@@ -7,19 +7,23 @@ import {
   Newspaper,
   TrendingUp,
   Bookmark,
-  Clock
+  Clock,
+  LoaderCircle
 } from 'lucide-react';
 import NewsTrendsChart from './components/NewsTrendsCharts';
 import NotificationSettings from './components/NotificationSettings';
+import { useReadingTimer } from './hooks/useReadingTimer';
 
 // Types
 interface Article {
+  id: string,
   title: string;
   summary: string;
   link: string;
   image_url?: string;
-  trending:boolean;
-  category:string;
+  trending?: boolean;
+  category?: string;
+  bookmark?: boolean;
   created_at: string;
 }
 
@@ -47,6 +51,10 @@ export default function Home() {
   const [articles, setArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState('Technology');
+  const [bookmarkLoader, setBookmarkLoader] = useState(false)
+  const [bookmarkLoaderUUID,setBookmarkLoaderUUID]=useState('')
+  const [duration,setDuration]=useState('')
+  const { formattedTime } = useReadingTimer();
 
   useEffect(() => {
     fetchArticles();
@@ -68,10 +76,46 @@ export default function Home() {
 
   const insights = {
     totalArticles: articles.length,
-    trendingTopics: articles.filter(article=> article.trending===true).length,
-    savedForLater: 84,
-    readingTime: '3h 15m'
+    trendingTopics: articles.filter(article => article.trending === true).length,
+    savedForLater: articles.filter(article => article.bookmark === true).length,
+    readingTime: `${formattedTime}`
   };
+
+  const updateBookmark = async (article: Article) => {
+    const article_id = article["id"]
+    const value = !article['bookmark']
+    try {
+      const response = await fetch('/api/articles', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          article_id: article_id,
+          is_bookmarked: value,
+        }),
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to update bookmark');
+      }
+      await fetchArticles();
+      const result = await response.json();
+      console.log('Bookmark synced to database:', result);
+      setBookmarkLoader(false)
+      setBookmarkLoaderUUID('')
+    } catch (error) {
+      console.error('Database Sync Error:', error);
+      setBookmarkLoader(false)
+      alert("Could not save bookmark. Please try again.");
+    }
+  }
+
+  const handleBookmark = async (article: Article) => {
+    setBookmarkLoader(true)
+    setBookmarkLoaderUUID(article?.id)
+    await updateBookmark(article)
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -131,9 +175,21 @@ export default function Home() {
               </div>
 
               <div className="md:w-3/5 p-8">
-                <span className="inline-block px-3 py-1 bg-emerald-500 text-white text-xs font-medium rounded-full mb-3">
-                  Featured News
-                </span>
+                <div className='flex justify-between'>
+                  <span className="inline-block px-3 py-1 bg-emerald-500 text-white text-xs font-medium rounded-full mb-3">
+                    Featured News
+                  </span>
+                  <div>
+                    {bookmarkLoader && bookmarkLoaderUUID==articles[0]?.id ? <LoaderCircle className='text-emerald-500 animate-spin' /> :
+                      <Bookmark onClick={() => handleBookmark(articles[0])}
+                        className={`w-6 h-6 transition-colors cursor-pointer ${articles[0].bookmark === true
+                          ? 'text-emerald-500 fill-emerald-500' :
+                          'text-emerald-500 fill-none'
+                          }`}
+                      />
+                    }
+                  </div>
+                </div>
 
                 <h3 className="text-2xl font-bold text-gray-900 mb-3 line-clamp-2">
                   {articles[0].title}
@@ -193,8 +249,8 @@ export default function Home() {
                 key={category}
                 onClick={() => setSelectedCategory(category)}
                 className={`px-5 py-2 rounded-full text-sm font-medium transition ${selectedCategory === category
-                    ? 'bg-emerald-500 text-white'
-                    : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'
+                  ? 'bg-emerald-500 text-white'
+                  : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'
                   }`}
               >
                 {category}
@@ -217,7 +273,7 @@ export default function Home() {
                 </div>
               ))
               : articles.slice(1, 10).map((article, index) => (
-                <NewsCard key={index} article={article} />
+                <NewsCard key={index} article={article} handleBookmark={handleBookmark} bookmarkLoader={bookmarkLoader} bookmarkLoaderUUID={bookmarkLoaderUUID} />
               ))}
           </div>
         </section>
@@ -246,10 +302,11 @@ function InsightCard({ icon, title, value, description }: InsightCardProps) {
   );
 }
 
-function NewsCard({ article }: { article: Article }) {
+function NewsCard({ article, handleBookmark,bookmarkLoader,bookmarkLoaderUUID }: { article: Article, handleBookmark: (article: Article) => void,bookmarkLoader:boolean,bookmarkLoaderUUID:string }) {
   return (
-    <div className="bg-white rounded-2xl shadow-sm overflow-hidden hover:shadow-md transition">
-      <div className="relative bg-gray-100 p-3">
+    <div className="relative bg-white rounded-2xl shadow-sm overflow-hidden hover:shadow-md transition">
+
+      <div className=" bg-gray-100 p-3">
         {article.image_url ? (
           <img src={article.image_url} alt={article.title} className="w-full h-40 object-contain rounded-xl" />
         ) : (
@@ -257,6 +314,16 @@ function NewsCard({ article }: { article: Article }) {
             <Newspaper className="w-10 h-10" />
           </div>
         )}
+      </div>
+      <div className="absolute top-4 right-4 z-1"> {/* ABSOLUTE CHILD */}
+        {bookmarkLoader && bookmarkLoaderUUID===article.id ? <LoaderCircle className='text-emerald-500 animate-spin' /> :
+          <Bookmark onClick={() => handleBookmark(article)}
+            className={`w-6 h-6 transition-colors cursor-pointer ${article.bookmark === true
+              ? 'text-emerald-500 fill-emerald-500' :
+              'text-emerald-500 fill-none'
+              }`}
+          />
+        }
       </div>
 
       <div className="p-4">

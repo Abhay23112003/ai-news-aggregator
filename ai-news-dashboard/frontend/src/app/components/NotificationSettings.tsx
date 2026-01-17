@@ -26,7 +26,7 @@ export default function NotificationSettings() {
         <button
           onClick={() => setEnabled(!enabled)}
           className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${
-            enabled ? "bg-green-500" : "bg-gray-300"
+            enabled ? "bg-emerald-500" : "bg-gray-300"
           }`}
         >
           <span
@@ -80,7 +80,7 @@ export default function NotificationSettings() {
 
       {/* Save */}
       <button
-        className="mt-6 w-full rounded-lg bg-green-500 py-2 text-sm font-medium text-white hover:bg-green-600"
+        className="mt-6 w-full rounded-lg bg-emerald-500 py-2 text-sm font-medium text-white hover:bg-emerald-600"
         onClick={() =>
           alert(
             `Saved!\nEnabled: ${enabled}\nFrequency: ${frequency}\nTime: ${time}`
