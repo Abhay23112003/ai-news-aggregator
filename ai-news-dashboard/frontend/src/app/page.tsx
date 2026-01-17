@@ -18,6 +18,8 @@ interface Article {
   summary: string;
   link: string;
   image_url?: string;
+  trending:boolean;
+  category:string;
   created_at: string;
 }
 
@@ -66,7 +68,7 @@ export default function Home() {
 
   const insights = {
     totalArticles: articles.length,
-    trendingTopics: Math.floor(Math.random()*10)+1,
+    trendingTopics: articles.filter(article=> article.trending===true).length,
     savedForLater: 84,
     readingTime: '3h 15m'
   };
