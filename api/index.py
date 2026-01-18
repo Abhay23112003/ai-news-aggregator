@@ -13,7 +13,7 @@ app = FastAPI(title="AI News API")
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000","https://newsflow-eight.vercel.app"],  # Add your frontend URLs
+    allow_origins=["http://localhost:3000","https://newsflow-eight.vercel.app","https://newsflow-abhay-sharmas-projects-a382520c.vercel.app"],  # Add your frontend URLs
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
