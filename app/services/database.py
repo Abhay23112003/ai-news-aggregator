@@ -39,10 +39,17 @@ def save_article(article):
 # ---------- READ (used by FastAPI) ----------
 def get_recent_articles(limit: int = 10):
     query = """
-        SELECT id,title, summary, source, link, image_url, trending, category, bookmark, created_at
+        WITH updated AS (
+            UPDATE articles
+            SET trending = false
+            WHERE trending = true
+              AND created_at < NOW() - INTERVAL '3 days'
+        )
+        SELECT id, title, summary, source, link, image_url,
+               trending, category, bookmark, created_at
         FROM articles
         ORDER BY created_at DESC
-        LIMIT %s
+        LIMIT %s;
     """
 
     with get_connection() as conn:
