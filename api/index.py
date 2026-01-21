@@ -24,7 +24,7 @@ def health():
     return {"status": "ok"}
 
 @app.get("/articles")
-def articles(limit: int = Query(10, ge=1, le=100)):
+def articles(limit: int = Query(10, ge=1, le=100000)):
     articles = get_recent_articles(limit=limit)
     return {
         "count": len(articles),

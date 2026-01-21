@@ -61,7 +61,7 @@ export default function Home() {
 
   const fetchArticles = async () => {
     try {
-      const response = await fetch('/api/articles?limit=50');
+      const response = await fetch('/api/articles?limit=100000');
       const data: ArticlesResponse = await response.json();
       setArticles(data.articles);
     } catch (error) {
