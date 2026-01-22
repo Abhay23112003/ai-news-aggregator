@@ -6,7 +6,8 @@ import {
   TrendingUp,
   Bookmark,
   Clock,
-  LoaderCircle
+  LoaderCircle,
+  Volume2
 } from 'lucide-react';
 import NewsTrendsChart from './components/NewsTrendsCharts';
 import NotificationSettings from './components/NotificationSettings';
@@ -54,6 +55,11 @@ export default function Home() {
   const [bookmarkLoaderUUID, setBookmarkLoaderUUID] = useState('')
   const [duration, setDuration] = useState('')
   const { formattedTime } = useReadingTimer();
+
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [speakingArticleId, setSpeakingArticleId] = useState<string | null>(null);
+  const [audio, setAudio] = useState<HTMLAudioElement | null>(null);
+
 
   useEffect(() => {
     fetchArticles();
@@ -115,6 +121,57 @@ export default function Home() {
     setBookmarkLoaderUUID(article?.id)
     await updateBookmark(article)
   }
+
+  const stopAudio = () => {
+    if (audio) {
+      audio.pause();
+      audio.currentTime = 0;
+      setAudio(null);
+    }
+    setIsSpeaking(false);
+    setSpeakingArticleId(null);
+  };
+
+  const speakSummary = async (article: Article) => {
+    try {
+      // Stop previous audio
+      stopAudio();
+
+      setIsSpeaking(true);
+      setSpeakingArticleId(article.id);
+
+      const response = await fetch('/api/tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: `${article.title}. ${article.summary}`,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('TTS request failed');
+      }
+
+      const blob = await response.blob();
+      const audioUrl = URL.createObjectURL(blob);
+
+      const newAudio = new Audio(audioUrl);
+      setAudio(newAudio);
+
+      newAudio.play();
+
+      newAudio.onended = () => {
+        stopAudio();
+      };
+
+    } catch (error) {
+      console.error(error);
+      stopAudio();
+      alert('Unable to play audio');
+    }
+  };
+
+
   // 1. Filter based on category
   const filteredArticles = articles.filter(article =>
     selectedCategory === 'All' ? true : article.category === selectedCategory
@@ -166,7 +223,7 @@ export default function Home() {
                   <span className="inline-block px-3 py-1 bg-emerald-500 text-white text-xs font-medium rounded-full mb-3">
                     Featured News
                   </span>
-                  <div className="flex-shrink-0">
+                  <div className="flex flex-col">
                     {bookmarkLoader && bookmarkLoaderUUID == articles[0]?.id ? <LoaderCircle className='text-emerald-500 animate-spin w-5 h-5 sm:w-6 sm:h-6' /> :
                       <Bookmark onClick={() => handleBookmark(articles[0])}
                         className={`w-5 h-5 sm:w-6 sm:h-6 transition-colors cursor-pointer ${articles[0].bookmark === true
@@ -174,7 +231,9 @@ export default function Home() {
                           'text-emerald-500 fill-none'
                           }`}
                       />
+
                     }
+
                   </div>
                 </div>
 
@@ -192,14 +251,24 @@ export default function Home() {
                     {formatDistanceToNow(new Date(articles[0].created_at))}
                   </span>
 
-                  <a
-                    href={articles[0].link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-full sm:w-auto text-center px-4 sm:px-5 py-2 bg-emerald-500 text-white text-sm rounded-lg hover:bg-emerald-600 transition"
-                  >
-                    Read Full Story
-                  </a>
+                  <div className='flex justify-between items-center gap-3'>
+                    <Volume2
+                      onClick={() => speakSummary(articles[0])}
+                      className={`w-5 h-5 sm:w-6 sm:h-6 cursor-pointer transition
+                        ${speakingArticleId === articles[0].id
+                          ? 'text-emerald-600 animate-pulse'
+                          : 'text-gray-400 hover:text-emerald-500'
+                        }`}
+                    />
+                    <a
+                      href={articles[0].link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-full sm:w-auto text-center px-4 sm:px-5 py-2 bg-emerald-500 text-white text-sm rounded-lg hover:bg-emerald-600 transition"
+                    >
+                      Read Full Story
+                    </a>
+                  </div>
                 </div>
               </div>
             </div>
@@ -268,6 +337,8 @@ export default function Home() {
                   handleBookmark={handleBookmark}
                   bookmarkLoader={bookmarkLoader}
                   bookmarkLoaderUUID={bookmarkLoaderUUID}
+                  speakSummary={speakSummary}
+                  speakingArticleId={speakingArticleId}
                 />
               ))
             }
@@ -281,8 +352,8 @@ export default function Home() {
                   key={i + 1}
                   onClick={() => setCurrentPage(i + 1)}
                   className={`w-8 h-8 sm:w-10 sm:h-10 rounded-xl text-sm sm:text-base font-medium transition ${currentPage === i + 1
-                      ? 'bg-emerald-500 text-white shadow-md'
-                      : 'bg-white text-gray-600 hover:bg-gray-100'
+                    ? 'bg-emerald-500 text-white shadow-md'
+                    : 'bg-white text-gray-600 hover:bg-gray-100'
                     }`}
                 >
                   {i + 1}
@@ -316,7 +387,11 @@ function InsightCard({ icon, title, value, description }: InsightCardProps) {
   );
 }
 
-function NewsCard({ article, handleBookmark, bookmarkLoader, bookmarkLoaderUUID }: { article: Article, handleBookmark: (article: Article) => void, bookmarkLoader: boolean, bookmarkLoaderUUID: string }) {
+function NewsCard({ article, handleBookmark, bookmarkLoader, bookmarkLoaderUUID, speakSummary,
+  speakingArticleId }: {
+    article: Article, handleBookmark: (article: Article) => void, bookmarkLoader: boolean, bookmarkLoaderUUID: string, speakSummary: (article: Article) => void,
+    speakingArticleId: string | null
+  }) {
   return (
     <div className="relative bg-white rounded-2xl shadow-sm overflow-hidden hover:shadow-md transition">
 
@@ -338,6 +413,7 @@ function NewsCard({ article, handleBookmark, bookmarkLoader, bookmarkLoaderUUID 
               }`}
           />
         }
+
       </div>
 
       <div className="p-3 sm:p-4">
@@ -354,14 +430,25 @@ function NewsCard({ article, handleBookmark, bookmarkLoader, bookmarkLoaderUUID 
             <span className="truncate">{formatDistanceToNow(new Date(article.created_at))}</span>
           </span>
 
-          <a
-            href={article.link}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-emerald-500 font-medium hover:text-emerald-600 transition text-xs whitespace-nowrap"
-          >
-            Read More
-          </a>
+          <div className='flex justify-center items-center gap-3'>
+            <Volume2
+              onClick={() => speakSummary(article)}
+              className={`w-5 h-5 cursor-pointer
+              ${speakingArticleId === article.id
+                  ? 'text-emerald-600 animate-pulse'
+                  : 'text-gray-400 hover:text-emerald-500'
+                }`}
+            />
+            <a
+              href={article.link}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-emerald-500 font-medium hover:text-emerald-600 transition text-xs whitespace-nowrap"
+            >
+              Read More
+            </a>
+          </div>
+
         </div>
       </div>
     </div>
