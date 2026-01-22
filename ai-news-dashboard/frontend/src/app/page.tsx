@@ -291,7 +291,7 @@ export default function Home() {
           <section className="mt-6 sm:mt-8 lg:mt-10 grid gap-4 sm:gap-6 lg:grid-cols-2">
             {/* Left side can be NotificationSettings later */}
             <NotificationSettings />
-            <NewsTrendsChart />
+            <NewsTrendsChart articles={articles} />
           </section>
 
         </section>
@@ -345,22 +345,122 @@ export default function Home() {
           </div>
 
           {/* 3. Pagination Controls */}
+          {/* 3. Pagination Controls */}
           {totalPages > 1 && (
             <div className="flex justify-center items-center gap-1.5 sm:gap-2 mt-6 sm:mt-8 lg:mt-10 flex-wrap">
-              {[...Array(totalPages)].map((_, i) => (
-                <button
-                  key={i + 1}
-                  onClick={() => setCurrentPage(i + 1)}
-                  className={`w-8 h-8 sm:w-10 sm:h-10 rounded-xl text-sm sm:text-base font-medium transition ${currentPage === i + 1
-                    ? 'bg-emerald-500 text-white shadow-md'
-                    : 'bg-white text-gray-600 hover:bg-gray-100'
-                    }`}
-                >
-                  {i + 1}
-                </button>
-              ))}
+              {/* First Page Button */}
+              <button
+                onClick={() => setCurrentPage(1)}
+                disabled={currentPage === 1}
+                className={`w-10 h-10 rounded-xl text-sm sm:text-base font-medium transition flex items-center justify-center ${currentPage === 1
+                    ? 'bg-emerald-500 text-white shadow-md cursor-default'
+                    : 'bg-white text-gray-600 hover:bg-gray-100 hover:text-gray-900 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed'
+                  }`}
+                aria-label="First page"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+              </button>
+
+              {/* Previous Page Button */}
+              <button
+                onClick={() => setCurrentPage(Math.max(currentPage - 1, 1))}
+                disabled={currentPage === 1}
+                className={`w-10 h-10 rounded-xl text-sm sm:text-base font-medium transition flex items-center justify-center ${currentPage === 1
+                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    : 'bg-white text-gray-600 hover:bg-gray-100 hover:text-gray-900 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed'
+                  }`}
+                aria-label="Previous page"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
+
+              {/* Page Numbers - Show max 5 pages */}
+              {(() => {
+                const pagesToShow = 5;
+                const halfPages = Math.floor(pagesToShow / 2);
+                let startPage = Math.max(1, currentPage - halfPages);
+                let endPage = Math.min(totalPages, startPage + pagesToShow - 1);
+
+                // Adjust start if we're near the end
+                if (endPage - startPage + 1 < pagesToShow) {
+                  startPage = Math.max(1, endPage - pagesToShow + 1);
+                }
+
+                const pageNumbers = [];
+
+                // Add ellipsis if not starting from page 1
+                if (startPage > 1) {
+                  pageNumbers.push(
+                    <span key="start-ellipsis" className="w-10 h-10 flex items-center justify-center text-gray-400 text-sm">
+                      ...
+                    </span>
+                  );
+                }
+
+                // Add page numbers
+                for (let i = startPage; i <= endPage; i++) {
+                  pageNumbers.push(
+                    <button
+                      key={i}
+                      onClick={() => setCurrentPage(i)}
+                      className={`w-10 h-10 rounded-xl text-sm sm:text-base font-medium transition ${currentPage === i
+                          ? 'bg-emerald-500 text-white shadow-md'
+                          : 'bg-white text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                        }`}
+                    >
+                      {i}
+                    </button>
+                  );
+                }
+
+                // Add ellipsis if not ending at last page
+                if (endPage < totalPages) {
+                  pageNumbers.push(
+                    <span key="end-ellipsis" className="w-10 h-10 flex items-center justify-center text-gray-400 text-sm">
+                      ...
+                    </span>
+                  );
+                }
+
+                return pageNumbers;
+              })()}
+
+              {/* Next Page Button */}
+              <button
+                onClick={() => setCurrentPage(Math.min(currentPage + 1, totalPages))}
+                disabled={currentPage === totalPages}
+                className={`w-10 h-10 rounded-xl text-sm sm:text-base font-medium transition flex items-center justify-center ${currentPage === totalPages
+                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    : 'bg-white text-gray-600 hover:bg-gray-100 hover:text-gray-900 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed'
+                  }`}
+                aria-label="Next page"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+
+              {/* Last Page Button */}
+              <button
+                onClick={() => setCurrentPage(totalPages)}
+                disabled={currentPage === totalPages}
+                className={`w-10 h-10 rounded-xl text-sm sm:text-base font-medium transition flex items-center justify-center ${currentPage === totalPages
+                    ? 'bg-emerald-500 text-white shadow-md cursor-default'
+                    : 'bg-white text-gray-600 hover:bg-gray-100 hover:text-gray-900 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed'
+                  }`}
+                aria-label="Last page"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                </svg>
+              </button>
             </div>
           )}
+
         </section>
       </main>
     </div>

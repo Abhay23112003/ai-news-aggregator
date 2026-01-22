@@ -1,7 +1,8 @@
 "use client";
 
 import {
-  LineChart,
+  ComposedChart,
+  Bar,
   Line,
   XAxis,
   YAxis,
@@ -11,17 +12,40 @@ import {
   Legend,
 } from "recharts";
 
-const data = [
-  { day: "Mon", volume: 45, sentiment: 50 },
-  { day: "Tue", volume: 60, sentiment: 65 },
-  { day: "Wed", volume: 40, sentiment: 45 },
-  { day: "Thu", volume: 75, sentiment: 70 },
-  { day: "Fri", volume: 55, sentiment: 60 },
-  { day: "Sat", volume: 80, sentiment: 75 },
-  { day: "Sun", volume: 65, sentiment: 55 },
-];
+type Article = {
+  id: string,
+  title: string;
+  summary: string;
+  link: string;
+  image_url?: string;
+  trending?: boolean;
+  category?: string;
+  bookmark?: boolean;
+  created_at: string;
+}
 
-export default function NewsTrendsChart() {
+function buildCategoryData(articles: Article[]) {
+  const map: Record<string, number> = {};
+
+  articles.forEach((article) => {
+    if (!article.category) return; // ignore null
+
+    map[article.category] = (map[article.category] || 0) + 1;
+  });
+
+  return Object.entries(map).map(([category, count]) => ({
+    category,
+    count,
+  }));
+}
+
+
+export default function NewsTrendsChart({
+  articles,
+}: {
+  articles: Article[]
+}) {
+  const data = buildCategoryData(articles)
   return (
     <div className="rounded-xl bg-white p-6 shadow">
       <h3 className="mb-4 text-lg font-semibold text-gray-900">
@@ -30,28 +54,28 @@ export default function NewsTrendsChart() {
 
       <div className="h-64">
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={data}>
+          <ComposedChart data={data}>
             <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="day" />
+            <XAxis dataKey="category" />
             <YAxis />
             <Tooltip />
             <Legend />
 
-            <Line
-              type="monotone"
-              dataKey="volume"
-              stroke="#22c55e"
-              strokeWidth={2}
-              name="News Volume"
+            <Bar
+              dataKey="count"
+              fill="#3b82f6"
+              name="Articles"
             />
             <Line
               type="monotone"
-              dataKey="sentiment"
-              stroke="#3b82f6"
+              dataKey="count"
+              stroke="#eb1165"
               strokeWidth={2}
-              name="Sentiment Score"
+              dot={{ r: 4 }}
+              name="Trend Line"
             />
-          </LineChart>
+          </ComposedChart >
+
         </ResponsiveContainer>
       </div>
     </div>
