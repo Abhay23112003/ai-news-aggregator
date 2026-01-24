@@ -4,19 +4,32 @@ import Groq from "groq-sdk";
 const groq = new Groq({
     apiKey: process.env.GROQ_API_KEY!,
 });
+function formatAsNewsAnchor(article: string) {
+  return `
+Good evening.
+
+This is your latest news update.
+
+${article
+  .replace(/\.\s+/g, ".\n\n")}
+
+This has been a developing story.
+
+Thank you for listening.
+`;
+}
 
 export async function POST(req: Request) {
     try {
         const { text } = await req.json();
-
         if (!text) {
             return NextResponse.json({ error: "Text is required" }, { status: 400 });
         }
-
+        const formattedText = formatAsNewsAnchor(text);
         const response = await groq.audio.speech.create({
             model: "canopylabs/orpheus-v1-english",
-            voice: "troy",
-            input: text,
+            voice: "narrator",
+            input: formattedText,
             response_format: "wav", // Correct and required
         });
 
