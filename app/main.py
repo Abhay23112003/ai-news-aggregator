@@ -22,7 +22,7 @@ def  should_send_email():
         with conn.cursor() as cur:
             cur.execute("""
                 SELECT email_enabled,frequency,last_sent_at
-                FROM notifiaction_settings
+                FROM notification_settings
                 where id=true
             """)
             row=cur.fetchone()
