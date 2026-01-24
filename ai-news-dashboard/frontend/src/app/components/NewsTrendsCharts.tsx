@@ -49,7 +49,7 @@ export default function NewsTrendsChart({
   return (
     <div className="rounded-xl bg-white p-6 shadow">
       <h3 className="mb-4 text-lg font-semibold text-gray-900">
-        News Trends
+        Category wise counts
       </h3>
 
       <div className="h-64">

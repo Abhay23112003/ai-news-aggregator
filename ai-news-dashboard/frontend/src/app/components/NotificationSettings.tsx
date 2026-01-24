@@ -1,12 +1,22 @@
 "use client";
 
-import { useState } from "react";
+type Props = {
+  emailEnabled: boolean;
+  frequency: "hourly" | "6hour" | "daily";
+  onToggle: () => void;
+  onFrequencyChange: (f: "hourly" | "6hour" | "daily") => void;
+  onSave: () => void;
+  loadingEmail: boolean;
+};
 
-export default function NotificationSettings() {
-  const [enabled, setEnabled] = useState(true);
-  const [frequency, setFrequency] = useState("6h");
-  const [time, setTime] = useState("09:00");
-
+export default function NotificationSettings({
+  emailEnabled,
+  frequency,
+  onToggle,
+  onFrequencyChange,
+  onSave,
+  loadingEmail,
+}: Props) {
   return (
     <div className="rounded-xl bg-white p-6 shadow">
       <h3 className="text-lg font-semibold text-gray-900">
@@ -24,14 +34,14 @@ export default function NotificationSettings() {
         </span>
 
         <button
-          onClick={() => setEnabled(!enabled)}
+          onClick={onToggle}
           className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${
-            enabled ? "bg-emerald-500" : "bg-gray-300"
+            emailEnabled ? "bg-emerald-500" : "bg-gray-300"
           }`}
         >
           <span
             className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${
-              enabled ? "translate-x-6" : "translate-x-1"
+              emailEnabled ? "translate-x-6" : "translate-x-1"
             }`}
           />
         </button>
@@ -44,50 +54,48 @@ export default function NotificationSettings() {
         </label>
 
         <div className="mt-2 flex gap-2">
-          {[
-            { id: "1h", label: "Every hour" },
-            { id: "6h", label: "Every 6 hours" },
-            { id: "daily", label: "Daily" },
-          ].map((opt) => (
-            <button
-              key={opt.id}
-              onClick={() => setFrequency(opt.id)}
-              className={`rounded-lg px-3 py-2 text-sm transition ${
-                frequency === opt.id
-                  ? "bg-green-100 text-green-700"
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-              }`}
-            >
-              {opt.label}
-            </button>
-          ))}
+          <button
+            onClick={() => onFrequencyChange("hourly")}
+            className={`rounded-lg px-3 py-2 text-sm transition ${
+              frequency === "hourly"
+                ? "bg-green-100 text-green-700"
+                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+            }`}
+          >
+            Every hour
+          </button>
+
+          <button
+            onClick={() => onFrequencyChange("6hour")}
+            className={`rounded-lg px-3 py-2 text-sm transition ${
+              frequency === "6hour"
+                ? "bg-green-100 text-green-700"
+                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+            }`}
+          >
+            Every 6 hours
+          </button>
+
+          <button
+            onClick={() => onFrequencyChange("daily")}
+            className={`rounded-lg px-3 py-2 text-sm transition ${
+              frequency === "daily"
+                ? "bg-green-100 text-green-700"
+                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+            }`}
+          >
+            Daily
+          </button>
         </div>
-      </div>
-
-      {/* Time picker */}
-      <div className="mt-6">
-        <label className="text-sm font-medium text-gray-700">
-          Preferred Time
-        </label>
-
-        <input
-          type="time"
-          value={time}
-          onChange={(e) => setTime(e.target.value)}
-          className="mt-2 w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-        />
       </div>
 
       {/* Save */}
       <button
-        className="mt-6 w-full rounded-lg bg-emerald-500 py-2 text-sm font-medium text-white hover:bg-emerald-600"
-        onClick={() =>
-          alert(
-            `Saved!\nEnabled: ${enabled}\nFrequency: ${frequency}\nTime: ${time}`
-          )
-        }
+        disabled={loadingEmail}
+        onClick={onSave}
+        className="mt-6 w-full rounded-lg bg-emerald-500 py-2 text-sm font-medium text-white hover:bg-emerald-600 disabled:opacity-60"
       >
-        Save Settings
+        {loadingEmail ? "Saving..." : "Save Settings"}
       </button>
     </div>
   );
