@@ -22,7 +22,7 @@ export async function POST(req: Request) {
     // Groq's TTS implementation
     const response = await groq.audio.speech.create({
       model: "canopylabs/orpheus-v1-english",
-      voice: "narrator",
+      voice: "troy",
       input: formattedText,
       response_format: "wav", 
     });
