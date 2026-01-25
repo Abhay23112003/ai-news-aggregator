@@ -67,16 +67,40 @@ def update_last_sent_at():
 
     print("Updated last_sent_at successfully")
 
+def get_notification_settings():
+    DATABASE_URL=os.getenv("DATABASE_URL")
+    if not DATABASE_URL:
+        print("DATABASE_URL not set")
+        return False
+    with psycopg.connect(DATABASE_URL) as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT email_enabled,frequency,last_sent_at
+                FROM notification_settings
+                where id=true
+            """)
+            row=cur.fetchone()
+    if not row:
+        print("No notification settings found")
+        return False
+    
+    return row
+
 def main():
-    if not should_send_email():
-        print("Skipping pipeline: notification rules not satisfied")
+    # 1. Consolidated check
+    settings = get_notification_settings() # Helper to return the row or None
+    if not settings or not should_send_email(settings):
+        print("Skipping pipeline...")
         return
 
-    feed_url = "https://feeds.bbci.co.uk/news/rss.xml"
+    email_enabled, frequency, last_sent_at = settings
 
+    # 2. Processing
+    feed_url = "https://feeds.bbci.co.uk/news/rss.xml"
     raw_articles = fetch_rss(feed_url, limit=5)
     articles = normalize_articles(raw_articles, source="BBC News")
 
+    processed_count = 0
     for article in articles:
         if not is_relevant(article):
             continue
@@ -85,30 +109,36 @@ def main():
             html = fetch_article_html(article["link"])
             article["full_text"] = extract_article_text(html)
             article["image_url"] = extract_image_url(html)
+            
+            json_data = summarize_article(article)
+            if json_data["summary"] == 'Summary unavailable':
+                continue
 
-        except Exception:
+            article.update({
+                "summary": json_data["summary"],
+                "trending": json_data["trending"],
+                "category": json_data["category"]
+            })
+            save_article(article)
+            processed_count += 1
+        except Exception as e:
+            print(f"Error processing article: {e}")
             continue
 
-        json_data = summarize_article(article)
-        if json_data["summary"]=='Summary unavailable':
-            continue
-        article["summary"] = json_data["summary"]
-        article["trending"]=json_data["trending"]
-        article["category"]=json_data["category"]
-        save_article(article)
-
-    # Send email after pipeline run
-    recent_articles = get_recent_articles(limit=10)
-    html_content = build_email_html(recent_articles)
-
-    send_email(
-        subject="📰 AI News Digest (Every 6 Hours)",
-        html_content=html_content
-    )
-    update_last_sent_at()
-
-    print("Pipeline run completed successfully.")
-
+    # 3. Email Logic
+    # Only get articles newer than the last email sent
+    recent_articles = get_recent_articles(limit=10, since=last_sent_at)
+    
+    if recent_articles:
+        html_content = build_email_html(recent_articles)
+        send_email(
+            subject=f"📰 AI News Digest ({frequency})",
+            html_content=html_content
+        )
+        update_last_sent_at()
+        print("Pipeline run completed successfully.")
+    else:
+        print("No new relevant articles to send.")
 
 if __name__ == "__main__":
     main()
