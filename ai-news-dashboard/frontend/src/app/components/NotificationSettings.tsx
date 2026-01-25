@@ -2,7 +2,7 @@
 
 type Props = {
   emailEnabled: boolean;
-  frequency: "hourly" | "6hour" | "daily";
+  frequency: "hourly" | "6hour" | "daily" | null;
   onToggle: () => void;
   onFrequencyChange: (f: "hourly" | "6hour" | "daily") => void;
   onSave: () => void;
@@ -91,7 +91,7 @@ export default function NotificationSettings({
 
       {/* Save */}
       <button
-        disabled={loadingEmail}
+        disabled={loadingEmail || !frequency}
         onClick={onSave}
         className="mt-6 w-full rounded-lg bg-emerald-500 py-2 text-sm font-medium text-white hover:bg-emerald-600 disabled:opacity-60"
       >

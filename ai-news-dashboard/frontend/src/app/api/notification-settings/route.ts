@@ -56,16 +56,16 @@ export async function GET(req: Request) {
 
 
 export async function POST(req: Request) {
-  const { email, email_enabled, frequency } = await req.json();
-
-  if (!email) {
-    return NextResponse.json(
-      { error: "Email is required" },
-      { status: 400 }
-    );
-  }
-
   try {
+    const { email, email_enabled, frequency } = await req.json();
+
+    if (!email || !frequency) {
+      return NextResponse.json(
+        { error: "Email and frequency are required" },
+        { status: 400 }
+      );
+    }
+
     await pool.query(
       `
       INSERT INTO notification_settings (email, email_enabled, frequency)
@@ -79,11 +79,10 @@ export async function POST(req: Request) {
       [email, email_enabled, frequency]
     );
 
-    return NextResponse.json({
-      message: "Notification settings saved",
-    });
+    return NextResponse.json({ message: "Notification settings saved" });
+
   } catch (error) {
-    console.error(error);
+    console.error("POST notification settings error:", error);
     return NextResponse.json(
       { error: "Failed to save settings" },
       { status: 500 }

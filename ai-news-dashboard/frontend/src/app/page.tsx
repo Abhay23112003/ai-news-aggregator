@@ -76,7 +76,7 @@ export default function Home() {
   const [audio, setAudio] = useState<HTMLAudioElement | null>(null);
 
   const [emailEnabled, setEmailEnabled] = useState<boolean>(true)
-  const [frequency, setFrequency] = useState<"daily" | "6hour" | "hourly">("6hour")
+  const [frequency, setFrequency] = useState<"daily" | "6hour" | "hourly" | null>(null)
   const [loadingEmail, setLoadingEmail] = useState(false);
 
   // Pagination & Scrolling
@@ -127,11 +127,11 @@ export default function Home() {
   }
 
   const saveSettings = async () => {
-    if (!userEmail) return;
+    if (!userEmail || !frequency) return;
 
     setLoadingEmail(true);
 
-    await fetch("/api/notification-settings", {
+    const res = await fetch("/api/notification-settings", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -142,7 +142,12 @@ export default function Home() {
     });
 
     setLoadingEmail(false);
+
+    if (!res.ok) {
+      alert("Failed to save settings");
+    }
   };
+
 
 
   const fetchArticles = async () => {
