@@ -109,7 +109,18 @@ export default function Home() {
         const res = await fetch(
           `/api/notification-settings?email=${encodeURIComponent(userEmail)}`
         );
+
+        if (!res.ok) {
+          console.error("Failed to fetch settings:", res.status);
+          return;
+        }
+
         const json = await res.json();
+
+        if (!json?.data) {
+          console.error("No data returned from API", json);
+          return;
+        }
 
         setEmailEnabled(json.data.email_enabled);
         setFrequency(json.data.frequency);

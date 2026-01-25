@@ -12,12 +12,11 @@ export async function GET(req: Request) {
 
     if (!email) {
       return NextResponse.json(
-        { error: "Email is required" },
+        { data: null, error: "Email is required" },
         { status: 400 }
       );
     }
 
-    // 1️⃣ Try fetching existing settings
     const existing = await pool.query(
       `SELECT email_enabled, frequency
        FROM notification_settings
@@ -26,12 +25,10 @@ export async function GET(req: Request) {
     );
 
     if (existing.rows.length > 0) {
-      return NextResponse.json({
-        data: existing.rows[0],
-      });
+      return NextResponse.json({ data: existing.rows[0] });
     }
 
-    // 2️⃣ First-time user → insert defaults
+    // First-time insert
     const inserted = await pool.query(
       `
       INSERT INTO notification_settings (email)
@@ -41,19 +38,16 @@ export async function GET(req: Request) {
       [email]
     );
 
-    return NextResponse.json({
-      data: inserted.rows[0],
-    });
+    return NextResponse.json({ data: inserted.rows[0] });
 
   } catch (err) {
     console.error("GET notification settings error:", err);
     return NextResponse.json(
-      { error: "Internal server error" },
+      { data: null, error: "Internal server error" },
       { status: 500 }
     );
   }
 }
-
 
 export async function POST(req: Request) {
   try {
@@ -61,7 +55,7 @@ export async function POST(req: Request) {
 
     if (!email || !frequency) {
       return NextResponse.json(
-        { error: "Email and frequency are required" },
+        { error: "Email and frequency required" },
         { status: 400 }
       );
     }
@@ -79,12 +73,12 @@ export async function POST(req: Request) {
       [email, email_enabled, frequency]
     );
 
-    return NextResponse.json({ message: "Notification settings saved" });
+    return NextResponse.json({ ok: true });
 
-  } catch (error) {
-    console.error("POST notification settings error:", error);
+  } catch (err) {
+    console.error("POST notification settings failed:", err);
     return NextResponse.json(
-      { error: "Failed to save settings" },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }
