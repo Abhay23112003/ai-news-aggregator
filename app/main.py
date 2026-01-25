@@ -91,6 +91,7 @@ def main():
     settings = get_notification_settings() # Helper to return the row or None
     if not settings or not should_send_email():
         print("Skipping pipeline...")
+        print(f"Output of should send email func:{should_send_email()}")
         return
 
     email_enabled, frequency, last_sent_at = settings
