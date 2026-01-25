@@ -18,6 +18,7 @@ import NewsTrendsChart from './components/NewsTrendsCharts';
 import NotificationSettings from './components/NotificationSettings';
 import { useReadingTimer } from './hooks/useReadingTimer';
 import Header from './components/Header';
+import Email from "next-auth/providers/email";
 
 // Types
 interface Article {
@@ -138,6 +139,9 @@ export default function Home() {
   }
 
   const saveSettings = async () => {
+    console.log("Email is:",userEmail)
+    console.log("email_enabled:",emailEnabled)
+    console.log("frequency is:",frequency)
     if (!userEmail || !frequency) return;
 
     setLoadingEmail(true);
