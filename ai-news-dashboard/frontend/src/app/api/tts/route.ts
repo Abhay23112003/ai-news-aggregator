@@ -6,7 +6,7 @@ const groq = new Groq({
 });
 
 function formatAsNewsAnchor(article: string) {
-  return `Good evening.\n\nThis is your latest news update.\n\n${article.replace(/\.\s+/g, ".\n\n")}\n\nThis has been a developing story.\n\nThank you for listening.`;
+  return `Hey!.\n\n${article.replace(/\.\s+/g, ".\n\n")}\n\nThis has been a developing story.\n\nThank you for listening.`;
 }
 
 export async function POST(req: Request) {
