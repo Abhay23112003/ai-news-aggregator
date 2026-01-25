@@ -89,7 +89,7 @@ def get_notification_settings():
 def main():
     # 1. Consolidated check
     settings = get_notification_settings() # Helper to return the row or None
-    if not settings or not should_send_email(settings):
+    if not settings or not should_send_email():
         print("Skipping pipeline...")
         return
 
