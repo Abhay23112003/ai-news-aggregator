@@ -127,7 +127,7 @@ def main():
 
     # 3. Email Logic
     # Only get articles newer than the last email sent
-    recent_articles = get_recent_articles(limit=10, since=last_sent_at)
+    recent_articles = get_recent_articles(limit=10)
     
     if recent_articles:
         html_content = build_email_html(recent_articles)
