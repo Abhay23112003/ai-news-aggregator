@@ -1,4 +1,5 @@
 'use client';
+import { useSession } from "next-auth/react";
 
 import { useState, useEffect, useRef } from 'react';
 import {
@@ -59,6 +60,10 @@ function formatDistanceToNow(date: Date): string {
 }
 
 export default function Home() {
+  const { data: session, status } = useSession();
+  const userEmail = session?.user?.email || null;
+
+
   const [articles, setArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState('All');
@@ -70,8 +75,8 @@ export default function Home() {
   const [speakingArticleId, setSpeakingArticleId] = useState<string | null>(null);
   const [audio, setAudio] = useState<HTMLAudioElement | null>(null);
 
-  const [emailEnabled,setEmailEnabled]=useState<boolean>(true)
-  const [frequency,setFrequency]=useState<"daily" | "6hour" | "hourly">("6hour")
+  const [emailEnabled, setEmailEnabled] = useState<boolean>(true)
+  const [frequency, setFrequency] = useState<"daily" | "6hour" | "hourly">("6hour")
   const [loadingEmail, setLoadingEmail] = useState(false);
 
   // Pagination & Scrolling
@@ -96,32 +101,49 @@ export default function Home() {
     }
   }, [currentPage]);
 
-  useEffect(()=>{
-    const fetchEmailNotificationSettings=async ()=>{
-      const result=await fetch("api/notification-settings")
-      const json=await result.json()
-      setEmailEnabled(json.data.email_enabled)
-      setFrequency(json.data.frequency)
-    }
-    fetchEmailNotificationSettings();
-  },[])
+  useEffect(() => {
+    if (status !== "authenticated" || !userEmail) return;
 
-  const handleToggle=()=>{
-    setEmailEnabled((prev)=>!prev)
+    const fetchEmailNotificationSettings = async () => {
+      try {
+        const res = await fetch(
+          `/api/notification-settings?email=${encodeURIComponent(userEmail)}`
+        );
+        const json = await res.json();
+
+        setEmailEnabled(json.data.email_enabled);
+        setFrequency(json.data.frequency);
+      } catch (err) {
+        console.error("Failed to fetch notification settings", err);
+      }
+    };
+
+    fetchEmailNotificationSettings();
+  }, [status, userEmail]);
+
+
+  const handleToggle = () => {
+    setEmailEnabled((prev) => !prev)
   }
 
-  const saveSettings=async ()=>{
+  const saveSettings = async () => {
+    if (!userEmail) return;
+
     setLoadingEmail(true);
-    await fetch("api/notification-settings",{
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({
-        email_enabled:emailEnabled,
+
+    await fetch("/api/notification-settings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: userEmail,
+        email_enabled: emailEnabled,
         frequency,
       }),
     });
+
     setLoadingEmail(false);
-  }
+  };
+
 
   const fetchArticles = async () => {
     try {
@@ -217,8 +239,8 @@ export default function Home() {
 
   const getPaginationBtnClass = (isActive: boolean) => `
     w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl text-xs sm:text-base font-medium transition flex items-center justify-center
-    ${isActive 
-      ? 'bg-emerald-500 text-white shadow-md cursor-default' 
+    ${isActive
+      ? 'bg-emerald-500 text-white shadow-md cursor-default'
       : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-100'
     }
     disabled:bg-gray-50 disabled:text-gray-300 disabled:cursor-not-allowed
@@ -232,7 +254,7 @@ export default function Home() {
         <section className="mb-6 sm:mb-8 lg:mb-10">
           <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4 sm:mb-6">Top Story</h2>
           {loading ? (
-             <div className="bg-white rounded-2xl shadow-sm p-4 animate-pulse h-64" />
+            <div className="bg-white rounded-2xl shadow-sm p-4 animate-pulse h-64" />
           ) : articles.length > 0 ? (
             <div className="bg-white rounded-2xl shadow-sm overflow-hidden flex flex-col md:flex-row">
               <div className="md:w-2/5 relative bg-gray-100 p-3">
@@ -280,10 +302,10 @@ export default function Home() {
             <InsightCard icon={<Clock className="text-emerald-500" />} title="Reading Time" value={insights.readingTime} description="Time spent this week." />
           </div>
           <div className="mt-8 grid gap-6 lg:grid-cols-2">
-            <NotificationSettings 
+            <NotificationSettings
               onToggle={handleToggle}
               emailEnabled={emailEnabled}
-              onFrequencyChange={(value)=>setFrequency(value)}
+              onFrequencyChange={(value) => setFrequency(value)}
               onSave={saveSettings}
               loadingEmail={loadingEmail}
               frequency={frequency}
@@ -308,7 +330,7 @@ export default function Home() {
         <section>
           <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4">{selectedCategory} News</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {loading ? [1,2,3].map(i => <div key={i} className="h-64 bg-white rounded-2xl animate-pulse" />) : 
+            {loading ? [1, 2, 3].map(i => <div key={i} className="h-64 bg-white rounded-2xl animate-pulse" />) :
               currentArticles.map((article) => (
                 <NewsCard key={article.id} article={article} handleBookmark={handleBookmark} bookmarkLoader={bookmarkLoader} bookmarkLoaderUUID={bookmarkLoaderUUID} speakSummary={speakSummary} speakingArticleId={speakingArticleId} />
               ))
@@ -327,7 +349,7 @@ export default function Home() {
               </button>
 
               {(() => {
-                const pagesToShow = 3; 
+                const pagesToShow = 3;
                 let startPage = Math.max(1, currentPage - 1);
                 let endPage = Math.min(totalPages, startPage + pagesToShow - 1);
                 if (endPage - startPage + 1 < pagesToShow) startPage = Math.max(1, endPage - pagesToShow + 1);

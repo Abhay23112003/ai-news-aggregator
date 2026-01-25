@@ -13,32 +13,47 @@ import os
 from datetime import datetime, timedelta, timezone
 import psycopg
 
-def  should_send_email():
-    DATABASE_URL=os.getenv("DATABASE_URL")
+def get_all_notification_settings():
+    DATABASE_URL = os.getenv("DATABASE_URL")
     if not DATABASE_URL:
         print("DATABASE_URL not set")
-        return False
+        return []
+
     with psycopg.connect(DATABASE_URL) as conn:
         with conn.cursor() as cur:
             cur.execute("""
-                SELECT email_enabled,frequency,last_sent_at
+                SELECT email, email_enabled, frequency, last_sent_at
                 FROM notification_settings
-                where id=true
             """)
-            row=cur.fetchone()
-    if not row:
-        print("No notification settings found")
-        return False
-    
-    email_enabled, frequency, last_sent_at = row
-    if not email_enabled:
-        print("Email notifications are OFF")
-        return False
+            rows = cur.fetchall()
+
+    return rows
+
+
+def get_all_notification_users():
+    DATABASE_URL = os.getenv("DATABASE_URL")
+    if not DATABASE_URL:
+        print("DATABASE_URL not set")
+        return []
+
+    with psycopg.connect(DATABASE_URL) as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT email, email_enabled, frequency, last_sent_at
+                FROM notification_settings
+                WHERE email_enabled = true
+            """)
+            rows = cur.fetchall()
+
+    return rows
+
+def should_send_email(frequency: str, last_sent_at):
     now = datetime.now(timezone.utc)
+
     # First ever email
     if last_sent_at is None:
-        print("No last_sent_at → allow email")
         return True
+
     if frequency == "hourly":
         return now - last_sent_at >= timedelta(hours=1)
 
@@ -50,7 +65,7 @@ def  should_send_email():
 
     return False
 
-def update_last_sent_at():
+def update_last_sent_at(email: str):
     DATABASE_URL = os.getenv("DATABASE_URL")
     if not DATABASE_URL:
         print("DATABASE_URL not set while updating last_sent_at")
@@ -61,11 +76,10 @@ def update_last_sent_at():
             cur.execute("""
                 UPDATE notification_settings
                 SET last_sent_at = now()
-                WHERE id = true
-            """)
+                WHERE email = %s
+            """, (email,))
         conn.commit()
 
-    print("Updated last_sent_at successfully")
 
 def get_notification_settings():
     DATABASE_URL=os.getenv("DATABASE_URL")
@@ -87,16 +101,13 @@ def get_notification_settings():
     return row
 
 def main():
-    # 1. Consolidated check
-    settings = get_notification_settings() # Helper to return the row or None
-    if not settings or not should_send_email():
-        print("Skipping pipeline...")
-        print(f"Output of should send email func:{should_send_email()}")
+    users = get_all_notification_settings()
+
+    if not users:
+        print("No users found. Exiting.")
         return
 
-    email_enabled, frequency, last_sent_at = settings
-
-    # 2. Processing
+    # 1️⃣ Fetch articles ONCE (important)
     feed_url = "https://feeds.bbci.co.uk/news/rss.xml"
     raw_articles = fetch_rss(feed_url, limit=5)
     articles = normalize_articles(raw_articles, source="BBC News")
@@ -110,7 +121,7 @@ def main():
             html = fetch_article_html(article["link"])
             article["full_text"] = extract_article_text(html)
             article["image_url"] = extract_image_url(html)
-            
+
             json_data = summarize_article(article)
             if json_data["summary"] == 'Summary unavailable':
                 continue
@@ -120,26 +131,47 @@ def main():
                 "trending": json_data["trending"],
                 "category": json_data["category"]
             })
+
             save_article(article)
             processed_count += 1
+
         except Exception as e:
             print(f"Error processing article: {e}")
             continue
 
-    # 3. Email Logic
-    # Only get articles newer than the last email sent
+    print(f"Articles processed: {processed_count}")
+
+    # 2️⃣ Email logic PER USER
     recent_articles = get_recent_articles(limit=10)
-    
-    if recent_articles:
-        html_content = build_email_html(recent_articles)
-        send_email(
-            subject=f"📰 AI News Digest ({frequency})",
-            html_content=html_content
-        )
-        update_last_sent_at()
-        print("Pipeline run completed successfully.")
-    else:
-        print("No new relevant articles to send.")
+
+    if not recent_articles:
+        print("No new articles to email.")
+        return
+
+    html_content = build_email_html(recent_articles)
+
+    for email, email_enabled, frequency, last_sent_at in users:
+        if not email_enabled:
+            continue
+
+        if not should_send_email(frequency, last_sent_at):
+            print(f"Skipping {email} — not time yet")
+            continue
+
+        try:
+            print(f"📧 Attempting email for {email}")
+            send_email(
+                to_email=email,
+                subject=f"📰 AI News Digest ({frequency})",
+                html_content=html_content
+            )
+
+            update_last_sent_at(email)
+            print(f"Email sent to {email}")
+
+        except Exception as e:
+            print(f"Failed sending email to {email}: {e}")
+
 
 if __name__ == "__main__":
     main()

@@ -4,9 +4,9 @@ const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:800
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
+    const raw = await request.text();
+    const body = raw ? JSON.parse(raw) : {};
 
-    // Forward the data to FastAPI
     const response = await fetch(`${BACKEND_URL}/sync-time`, {
       method: 'POST',
       headers: {
