@@ -1,4 +1,4 @@
-name: AI News Aggregator (Every 6 Hours)
+name: AI News Aggregator
 
 on:
   schedule:
